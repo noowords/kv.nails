@@ -1,0 +1,94 @@
+use serde_json;
+use async_trait::{ async_trait };
+use sqlx::{ MySql, Transaction };
+
+use crate::domain::{
+    user::value_objects::{ UserId },
+    master::{ Master, MasterRepository }
+};
+
+use super::super::models::{ MasterRecord };
+
+pub struct MySqlMasterRepository;
+
+#[async_trait]
+impl MasterRepository for MySqlMasterRepository {
+    async fn create(
+        tx: &mut Transaction<'_, MySql>,
+        master: &mut Master
+    ) -> Result<(), String> {
+        let schedule_json = serde_json::to_value(master.schedule())
+            .map_err(|e| format!("Schedule serializing error: {}", e))?;
+            
+        sqlx::query(
+            r#"
+            INSERT INTO masters (user_id, schedule)
+            VALUES (?, ?)
+            "#
+        )
+            .bind(master.user_id().value())
+            .bind(&schedule_json)
+            .execute(&mut **tx)
+            .await
+            .map_err(|e| format!("Master insert error: {}", e))?;
+
+        Ok(())
+    }
+    
+    async fn get_by_user_id(
+        tx: &mut Transaction<'_, MySql>,
+        user_id: UserId
+    ) -> Result<Option<Master>, String> {
+        let master_record: Option<MasterRecord> = sqlx::query_as(
+            r#"
+            SELECT user_id, schedule
+            FROM masters
+            WHERE user_id = ?
+            "#
+        )
+            .bind(user_id.value())
+            .fetch_optional(&mut **tx)
+            .await
+            .map_err(|e| format!("Master find error: {}", e))?;
+
+        match master_record {
+            Some(mr) => Ok(Some(Master::try_from(mr)?)),
+            None => Ok(None)
+        }
+    }
+    
+    async fn exists(
+        tx: &mut Transaction<'_, MySql>,
+        user_id: UserId
+    ) -> Result<bool, String> {
+        unimplemented!()
+    }
+
+    async fn update(
+        tx: &mut Transaction<'_, MySql>,
+        master: &mut Master
+    ) -> Result<(), String> {
+        let record = MasterRecord::from(&*master);
+
+        sqlx::query(
+            r#"
+            UPDATE masters SET schedule = ?
+            WHERE user_id = ?
+            "#
+        )
+            .bind(record.schedule())
+            .bind(record.user_id())
+            .execute(&mut **tx)
+            .await
+            .map_err(|e| format!("Master update error: {}", e))?;
+
+        Ok(())
+    }
+    
+    async fn remove(
+        tx: &mut Transaction<'_, MySql>,
+        user_id: UserId
+    ) -> Result<(), String> {
+        unimplemented!()
+    }
+}
