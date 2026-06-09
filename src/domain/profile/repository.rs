@@ -18,7 +18,7 @@ pub trait ProfileRepository {
     
     async fn exists(
         tx: &mut Transaction<'_, MySql>,
-        id: UserId
+        user_id: UserId
     ) -> Result<bool, String>;
 
     async fn update(
@@ -28,6 +28,6 @@ pub trait ProfileRepository {
     
     async fn remove(
         tx: &mut Transaction<'_, MySql>,
-        id: UserId
+        user_id: UserId
     ) -> Result<(), String>;
 }

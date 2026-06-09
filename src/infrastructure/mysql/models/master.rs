@@ -42,7 +42,7 @@ impl TryFrom<MasterRecord> for Master {
         let schedule: Schedule = serde_json::from_value(record.schedule)
             .map_err(|e| format!("Schedule deserialization error: {}", e))?;
         
-        Ok(Self::from_record(
+        Ok(Self::new(
             UserId::from(record.user_id),
             schedule
         ))

@@ -18,11 +18,12 @@ impl UserRepository for MySqlUserRepository {
     ) -> Result<(), String> {
         sqlx::query(
             r#"
-            INSERT INTO users (phone, role, created_at)
-            VALUES (?, ?, CURRENT_TIMESTAMP)
+            INSERT INTO users (id, phone, role, created_at)
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
             "#
         )
-            .bind(user.phone().value())
+            .bind(user.id().value())
+            .bind(user.phone().as_ref().map(|p| p.value().clone()))
             .bind(user.role().as_str())
             .execute(&mut **tx)
             .await
@@ -57,7 +58,20 @@ impl UserRepository for MySqlUserRepository {
         tx: &mut Transaction<'_, MySql>,
         id: UserId
     ) -> Result<bool, String> {
-        unimplemented!()
+        let row = sqlx::query(
+            r#"
+            SELECT 1
+            FROM users
+            WHERE id = ?
+            LIMIT 1
+            "#
+        )
+            .bind(id.value())
+            .fetch_optional(&mut **tx)
+            .await
+            .map_err(|e| format!("Check user existence error: {}", e))?;
+        
+        Ok(row.is_some())
     }
 
     async fn update(
@@ -66,7 +80,13 @@ impl UserRepository for MySqlUserRepository {
     ) -> Result<(), String> {
         let user_record = UserRecord::from(&*user);
 
-        sqlx::query("UPDATE users SET phone = ?, role = ? WHERE id = ?")
+        sqlx::query(
+            r#"
+            UPDATE users
+            SET phone = ?, role = ?
+            WHERE id = ?
+            "#
+        )
             .bind(user_record.phone())
             .bind(user_record.role())
             .bind(user_record.id())
@@ -81,6 +101,17 @@ impl UserRepository for MySqlUserRepository {
         tx: &mut Transaction<'_, MySql>,
         id: UserId
     ) -> Result<(), String> {
-        unimplemented!()
+        sqlx::query(
+            r#"
+            DELETE FROM users
+            WHERE id = ?
+            "#
+        )
+            .bind(id.value())
+            .execute(&mut **tx)
+            .await
+            .map_err(|e| format!("User delete error: {}", e))?;
+        
+        Ok(())
     }
 }

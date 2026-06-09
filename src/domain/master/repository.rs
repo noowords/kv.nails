@@ -13,12 +13,12 @@ pub trait MasterRepository {
     
     async fn get_by_user_id(
         tx: &mut Transaction<'_, MySql>,
-        id: UserId
+        user_id: UserId
     ) -> Result<Option<Master>, String>;
     
     async fn exists(
         tx: &mut Transaction<'_, MySql>,
-        id: UserId
+        user_id: UserId
     ) -> Result<bool, String>;
     
     async fn update(
@@ -28,6 +28,6 @@ pub trait MasterRepository {
     
     async fn remove(
         tx: &mut Transaction<'_, MySql>,
-        id: UserId
+        user_id: UserId
     ) -> Result<(), String>;
 }

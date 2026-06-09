@@ -15,36 +15,20 @@ pub struct Appointment {
 
 impl Appointment {
     pub fn new(
-        master_id: UserId,
-        client_id: UserId,
-        date: NaiveDate,
-        time: NaiveTime
-    ) -> Self {
-        Self {
-            id: AppointmentId::new(),
-            master_id,
-            client_id,
-            date,
-            time,
-            status: AppointmentStatus::Pending
-        }
-    }
-
-    pub fn from_record(
-        id: AppointmentId,
+        id: Option<AppointmentId>,
         master_id: UserId,
         client_id: UserId,
         date: NaiveDate,
         time: NaiveTime,
-        status: AppointmentStatus
+        status: Option<AppointmentStatus>
     ) -> Self {
         Self {
-            id,
+            id: id.unwrap_or(AppointmentId::new()),
             master_id,
             client_id,
             date,
             time,
-            status
+            status: status.unwrap_or(AppointmentStatus::Pending)
         }
     }
 

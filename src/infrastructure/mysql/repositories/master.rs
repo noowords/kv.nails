@@ -61,7 +61,20 @@ impl MasterRepository for MySqlMasterRepository {
         tx: &mut Transaction<'_, MySql>,
         user_id: UserId
     ) -> Result<bool, String> {
-        unimplemented!()
+        let row = sqlx::query(
+            r#"
+            SELECT 1
+            FROM masters
+            WHERE user_id = ?
+            LIMIT 1
+            "#
+        )
+            .bind(user_id.value())
+            .fetch_optional(&mut **tx)
+            .await
+            .map_err(|e| format!("Check master existence error: {}", e))?;
+        
+        Ok(row.is_some())
     }
 
     async fn update(
@@ -89,6 +102,17 @@ impl MasterRepository for MySqlMasterRepository {
         tx: &mut Transaction<'_, MySql>,
         user_id: UserId
     ) -> Result<(), String> {
-        unimplemented!()
+        sqlx::query(
+            r#"
+            DELETE FROM masters
+            WHERE user_id = ?
+            "#
+        )
+            .bind(user_id.value())
+            .execute(&mut **tx)
+            .await
+            .map_err(|e| format!("Master delete error: {}", e))?;
+        
+        Ok(())
     }
 }

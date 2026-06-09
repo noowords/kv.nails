@@ -19,10 +19,11 @@ impl AppointmentRepository for MySqlAppointmentRepository {
     ) -> Result<(), String> {
         sqlx::query(
             r#"
-            INSERT INTO appointments (master_id, client_id, date, time, status, created_at)
-            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            INSERT INTO appointments (id, master_id, client_id, date, time, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             "#
         )
+            .bind(appointment.id().value())
             .bind(appointment.master_id().value())
             .bind(appointment.client_id().value())
             .bind(appointment.date())
@@ -39,14 +40,42 @@ impl AppointmentRepository for MySqlAppointmentRepository {
         tx: &mut Transaction<'_, MySql>,
         id: AppointmentId
     ) -> Result<Option<Appointment>, String> {
-        unimplemented!()
+        let appointment_record: Option<AppointmentRecord> = sqlx::query_as(
+            r#"
+            SELECT id, master_id, client_id, date, time, status
+            FROM appointments
+            WHERE id = ?
+            "#
+        )
+            .bind(id.value())
+            .fetch_optional(&mut **tx)
+            .await
+            .map_err(|e| format!("Find appointment error: {}", e))?;
+
+        match appointment_record {
+            Some(ar) => Ok(Some(Appointment::try_from(ar)?)),
+            None => Ok(None)
+        }
     }
     
     async fn exists(
         tx: &mut Transaction<'_, MySql>,
         id: AppointmentId
     ) -> Result<bool, String> {
-        unimplemented!()
+        let row = sqlx::query(
+            r#"
+            SELECT 1
+            FROM appointments
+            WHERE id = ?
+            LIMIT 1
+            "#
+        )
+            .bind(id.value())
+            .fetch_optional(&mut **tx)
+            .await
+            .map_err(|e| format!("Check appointment existence error: {}", e))?;
+        
+        Ok(row.is_some())
     }
     
     async fn update(
@@ -75,6 +104,17 @@ impl AppointmentRepository for MySqlAppointmentRepository {
         tx: &mut Transaction<'_, MySql>,
         id: AppointmentId
     ) -> Result<(), String> {
-        unimplemented!()
+        sqlx::query(
+            r#"
+            DELETE FROM appointments
+            WHERE id = ?
+            "#
+        )
+            .bind(id.value())
+            .execute(&mut **tx)
+            .await
+            .map_err(|e| format!("Appointment delete error: {}", e))?;
+        
+        Ok(())
     }
 }

@@ -17,12 +17,12 @@ impl UserRecord {
     pub fn new(
         id: Uuid,
         role: String,
-        phone: UserPhone
+        phone: Option<String>
     ) -> Self {
         Self {
             id,
             role,
-            phone: phone.value().clone()
+            phone
         }
     }
 
@@ -43,13 +43,14 @@ impl TryFrom<UserRecord> for User {
     type Error = String;
     
     fn try_from(record: UserRecord) -> Result<Self, Self::Error> {
-        let role = UserRole::from_str(&record.role)
-            .ok_or_else(|| format!("Unknown role: {}", record.role))?;
-        
-        Ok(Self::from_record(
-            UserId::from(record.id),
-            role,
-            UserPhone::new(record.phone)
+        Ok(Self::new(
+            Some(UserId::from(record.id)),
+            Some(UserRole::from_str(&record.role)
+                .ok_or_else(|| format!("Unknown role: {}", record.role))?),
+             match record.phone {
+                Some(p) => Some(UserPhone::new(p)?),
+                None => None
+            }
         ))
     }
 }
@@ -58,8 +59,8 @@ impl From<&User> for UserRecord {
     fn from(user: &User) -> Self {
         Self {
             id: user.id().value(),
-            phone: user.phone().value().clone(),
-            role: user.role().as_str().to_string()
+            role: user.role().as_str().to_string(),
+            phone: user.phone().as_ref().map(|p| p.value().clone())
         }
     }
 }

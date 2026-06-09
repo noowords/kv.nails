@@ -68,16 +68,14 @@ impl TryFrom<AppointmentRecord> for Appointment {
     type Error = String;
     
     fn try_from(record: AppointmentRecord) -> Result<Self, Self::Error> {
-        let status = AppointmentStatus::from_str(&record.status)
-            .ok_or_else(|| format!("Unknown status: {}", record.status))?;
-        
-        Ok(Self::from_record(
-            AppointmentId::from(record.id),
+        Ok(Self::new(
+            Some(AppointmentId::from(record.id)),
             UserId::from(record.master_id),
             UserId::from(record.client_id),
             record.date,
             record.time,
-            status
+            Some(AppointmentStatus::from_str(&record.status)
+                .ok_or_else(|| format!("Unknown status: {}", record.status))?)
         ))
     }
 }

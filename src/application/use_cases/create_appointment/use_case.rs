@@ -31,16 +31,18 @@ impl CreateAppointmentUseCase {
         }
         
         let appointment = Appointment::new(
+            None,
             cmd.master_id,
             cmd.client_id,
             cmd.date,
-            cmd.time
+            cmd.time,
+            None
         );
         
         MySqlAppointmentRepository::create(
             &mut uow.tx(),
             appointment
-        ).await;
+        ).await?;
 
         Ok(())
     }

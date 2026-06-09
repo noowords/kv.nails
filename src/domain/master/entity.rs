@@ -8,14 +8,10 @@ pub struct Master {
 }
 
 impl Master {
-    pub fn new(user_id: UserId, schedule: Schedule) -> Self {
-        Self {
-            user_id,
-            schedule
-        }
-    }
-
-    pub fn from_record(user_id: UserId, schedule: Schedule) -> Self {
+    pub fn new(
+        user_id: UserId,
+        schedule: Schedule
+    ) -> Self {
         Self {
             user_id,
             schedule

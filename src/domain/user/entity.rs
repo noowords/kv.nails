@@ -4,22 +4,18 @@ use super::value_objects::{ UserId, UserRole, UserPhone };
 pub struct User {
     id: UserId,
     role: UserRole,
-    phone: UserPhone
+    phone: Option<UserPhone>
 }
 
 impl User {
-    pub fn new(phone: UserPhone) -> Self {
+    pub fn new(
+        id: Option<UserId>,
+        role: Option<UserRole>,
+        phone: Option<UserPhone>
+    ) -> Self {
         Self {
-            id: UserId::new(),
-            role: UserRole::Client,
-            phone
-        }
-    }
-
-    pub fn from_record(id: UserId, role: UserRole, phone: UserPhone) -> Self {
-        Self {
-            id: id,
-            role,
+            id: id.unwrap_or(UserId::new()),
+            role: role.unwrap_or(UserRole::Client),
             phone
         }
     }
@@ -32,7 +28,7 @@ impl User {
         &self.role
     }
 
-    pub fn phone(&self) -> &UserPhone {
+    pub fn phone(&self) -> &Option<UserPhone> {
         &self.phone
     }
 
@@ -40,7 +36,7 @@ impl User {
         self.role = role;
     }
 
-    pub(crate) fn set_phone(&mut self, phone: UserPhone) {
+    pub(crate) fn set_phone(&mut self, phone: Option<UserPhone>) {
         self.phone = phone;
     }
 }

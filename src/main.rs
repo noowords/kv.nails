@@ -4,7 +4,6 @@ mod application;
 
 use sqlx::mysql::{ MySqlPoolOptions };
 
-use crate::domain::user::value_objects::{ UserPhone };
 use crate::infrastructure::mysql::{ MySqlUnitOfWork };
 use crate::application::use_cases::register_user::{ RegisterUserCommand, RegisterUserUseCase };
 
@@ -19,7 +18,11 @@ async fn main() -> Result<(), String> {
     let mut uow = MySqlUnitOfWork::begin(&pool).await?;
 
     let cmd = RegisterUserCommand::new(
-        UserPhone::new(Some("+X (XXX) XXX-XX-XX".to_string()))
+        Some(String::from("00000000000")),
+        String::from("Иван"),
+        String::from("Иванов"),
+        Some(String::from("Иванович")),
+        None
     );
 
     match RegisterUserUseCase::execute(&mut uow, cmd).await {
