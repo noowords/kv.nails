@@ -1,5 +1,3 @@
-Project Checklist
-
 Architecture
 
 * Layered architecture (Domain, Application, Infrastructure, Presentation)
