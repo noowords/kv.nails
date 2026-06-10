@@ -19,7 +19,7 @@ pub async fn register_user(
         Some(String::from("00000000000")),
         String::from("Иван"),
         String::from("Иванов"),
-        Some(String::from("Иванович")),
+        None,
         None
     );
 
