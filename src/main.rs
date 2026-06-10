@@ -1,40 +1,16 @@
 mod domain;
 mod infrastructure;
 mod application;
+mod presentation;
 
-use sqlx::mysql::{ MySqlPoolOptions };
-
-use crate::infrastructure::mysql::{ MySqlUnitOfWork };
-use crate::application::use_cases::register_user::{ RegisterUserCommand, RegisterUserUseCase };
+use crate::infrastructure::mysql::{ create_mysql_pool };
+use crate::presentation::{ AppState, create_router, run };
 
 #[tokio::main]
-async fn main() -> Result<(), String> {
-    let pool = MySqlPoolOptions::new()
-        .max_connections(10)
-        .connect("mysql://root:root@localhost:3306/kvnails")
-        .await
-        .map_err(|e| format!("MySQL connection error: {}", e))?;
-
-    let mut uow = MySqlUnitOfWork::begin(&pool).await?;
-
-    let cmd = RegisterUserCommand::new(
-        Some(String::from("00000000000")),
-        String::from("Иван"),
-        String::from("Иванов"),
-        Some(String::from("Иванович")),
-        None
-    );
-
-    match RegisterUserUseCase::execute(&mut uow, cmd).await {
-        Ok(()) => {
-            uow.commit().await?;
-
-            Ok(())
-        }
-        Err(e) => {
-            uow.rollback().await?;
-
-            Err(e)
-        }
-    }
+async fn main() {
+    let db_pool = create_mysql_pool("mysql://root:root@localhost:3306/kvnails").await;
+    let state = AppState::new(db_pool);
+    let app = create_router(state);
+    
+    run(app).await;
 }
