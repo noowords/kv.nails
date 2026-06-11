@@ -1,22 +1,7 @@
-use super::{
-    user::{ UserRepository },
-    profile::{ ProfileRepository },
-    master::{ MasterRepository },
-    appointment::{ AppointmentRepository }
-};
+use async_trait::{ async_trait };
 
-pub trait UnitOfWork {
-    type UserRepository: UserRepository;
-    type ProfileRepository: ProfileRepository;
-    type MasterRepository: MasterRepository;
-    type AppointmentRepository: AppointmentRepository;
-
-    fn user_repository(&mut self) -> &mut Self::UserRepository;
-    fn profile_repository(&mut self) -> &mut Self::ProfileRepository;
-    fn master_repository(&mut self) -> &mut Self::MasterRepository;
-    fn appointment_repository(&mut self) -> &mut Self::AppointmentRepository;
-
-    async fn begin(&mut self) -> Result<(), String>;
-    async fn commit(&mut self) -> Result<(), String>;
-    async fn rollback(&mut self) -> Result<(), String>;
+#[async_trait]
+pub trait UnitOfWork: Send + Sync {
+    async fn commit(self: Box<Self>) -> Result<(), String>;
+    async fn rollback(self: Box<Self>) -> Result<(), String>;
 }
