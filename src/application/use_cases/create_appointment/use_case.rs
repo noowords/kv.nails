@@ -1,21 +1,27 @@
 use crate::domain::{
-    master::{ MasterRepository },
-    appointment::{ Appointment, AppointmentRepository, AppointmentService }
-};
-use crate::infrastructure::mysql::{
-    MySqlUnitOfWork,
-    repositories::{ MySqlMasterRepository, MySqlAppointmentRepository }
+    UnitOfWork,
+    appointment::{ Appointment, AppointmentRepository }
 };
 
 use super::{ CreateAppointmentCommand };
 
-pub struct CreateAppointmentUseCase;
+pub struct CreateAppointmentUseCase<'a> {
+    appointment_repository: &'a dyn AppointmentRepository,
+    uow: Box<dyn UnitOfWork>
+}
 
-impl CreateAppointmentUseCase {
-    pub async fn execute(
-        uow: &mut MySqlUnitOfWork<'_>,
-        cmd: CreateAppointmentCommand
-    ) -> Result<(), String> {
+impl<'a> CreateAppointmentUseCase<'a> {
+    pub fn new(
+        appointment_repository: &'a dyn AppointmentRepository,
+        uow: Box<dyn UnitOfWork>
+    ) -> Self {
+        Self {
+            appointment_repository,
+            uow
+        }
+    }
+
+    pub async fn execute(self, cmd: CreateAppointmentCommand) -> Result<(), String> {
         let appointment = Appointment::new(
             None,
             cmd.master_id,
@@ -25,9 +31,10 @@ impl CreateAppointmentUseCase {
             None
         );
 
-        MySqlAppointmentRepository::create(
-            &mut uow.tx(),
-            appointment
-        ).await
+        self.appointment_repository.create(appointment).await?;
+
+        self.uow.commit().await?;
+
+        Ok(())
     }
 }
