@@ -9,16 +9,16 @@ use crate::domain::{
 
 use super::{ RegisterUserCommand };
 
-pub struct RegisterUserUseCase<'a> {
-    user_repository: &'a dyn UserRepository,
-    profile_repository: &'a dyn ProfileRepository,
+pub struct RegisterUserUseCase {
+    user_repository: Box<dyn UserRepository>,
+    profile_repository: Box<dyn ProfileRepository>,
     uow: Box<dyn UnitOfWork>
 }
 
-impl<'a> RegisterUserUseCase<'a> {
+impl RegisterUserUseCase {
     pub fn new(
-        user_repository: &'a dyn UserRepository,
-        profile_repository: &'a dyn ProfileRepository,
+        user_repository: Box<dyn UserRepository>,
+        profile_repository: Box<dyn ProfileRepository>,
         uow: Box<dyn UnitOfWork>
     ) -> Self {
         Self {

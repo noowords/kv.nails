@@ -5,14 +5,14 @@ use crate::domain::{
 
 use super::{ CreateAppointmentCommand };
 
-pub struct CreateAppointmentUseCase<'a> {
-    appointment_repository: &'a dyn AppointmentRepository,
+pub struct CreateAppointmentUseCase {
+    appointment_repository: Box<dyn AppointmentRepository>,
     uow: Box<dyn UnitOfWork>
 }
 
-impl<'a> CreateAppointmentUseCase<'a> {
+impl CreateAppointmentUseCase {
     pub fn new(
-        appointment_repository: &'a dyn AppointmentRepository,
+        appointment_repository: Box<dyn AppointmentRepository>,
         uow: Box<dyn UnitOfWork>
     ) -> Self {
         Self {

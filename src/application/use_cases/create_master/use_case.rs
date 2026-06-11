@@ -5,14 +5,14 @@ use crate::domain::{
 
 use super::{ CreateMasterCommand };
 
-pub struct CreateMasterUseCase<'a> {
-    master_repository: &'a dyn MasterRepository,
+pub struct CreateMasterUseCase {
+    master_repository: Box<dyn MasterRepository>,
     uow: Box<dyn UnitOfWork>
 }
 
-impl<'a> CreateMasterUseCase<'a> {
+impl CreateMasterUseCase {
     pub fn new(
-        master_repository: &'a dyn MasterRepository,
+        master_repository: Box<dyn MasterRepository>,
         uow: Box<dyn UnitOfWork>
     ) -> Self {
         Self {
