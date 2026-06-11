@@ -1,6 +1,8 @@
-use serde_json;
+use std::sync::{ Arc };
+use tokio::sync::{ Mutex };
 use async_trait::{ async_trait };
 use sqlx::{ MySql, Transaction };
+use serde_json;
 
 use crate::domain::{
     user::value_objects::{ UserId },
@@ -9,14 +11,23 @@ use crate::domain::{
 
 use super::super::models::{ MasterRecord };
 
-pub struct MySqlMasterRepository;
+pub struct MySqlMasterRepository {
+    tx: Arc<Mutex<Option<Transaction<'static, MySql>>>>
+}
+
+impl MySqlMasterRepository {
+    pub fn new(tx: Arc<Mutex<Option<Transaction<'static, MySql>>>>) -> Self {
+        Self { tx }
+    }
+}
 
 #[async_trait]
 impl MasterRepository for MySqlMasterRepository {
-    async fn create(
-        tx: &mut Transaction<'_, MySql>,
-        master: &mut Master
-    ) -> Result<(), String> {
+    async fn create(&self, master: &mut Master) -> Result<(), String> {
+        let mut tx_guard = self.tx.lock().await;
+        let tx = tx_guard.as_mut()
+            .ok_or_else(|| "The transaction has already been completed".to_string())?;
+
         let schedule_json = serde_json::to_value(master.schedule())
             .map_err(|e| format!("Schedule serializing error: {}", e))?;
             
@@ -35,10 +46,11 @@ impl MasterRepository for MySqlMasterRepository {
         Ok(())
     }
     
-    async fn get_by_user_id(
-        tx: &mut Transaction<'_, MySql>,
-        user_id: UserId
-    ) -> Result<Option<Master>, String> {
+    async fn get_by_user_id(&self, user_id: UserId) -> Result<Option<Master>, String> {
+        let mut tx_guard = self.tx.lock().await;
+        let tx = tx_guard.as_mut()
+            .ok_or_else(|| "The transaction has already been completed".to_string())?;
+
         let master_record: Option<MasterRecord> = sqlx::query_as(
             r#"
             SELECT user_id, schedule
@@ -57,10 +69,11 @@ impl MasterRepository for MySqlMasterRepository {
         }
     }
     
-    async fn exists(
-        tx: &mut Transaction<'_, MySql>,
-        user_id: UserId
-    ) -> Result<bool, String> {
+    async fn exists(&self, user_id: UserId) -> Result<bool, String> {
+        let mut tx_guard = self.tx.lock().await;
+        let tx = tx_guard.as_mut()
+            .ok_or_else(|| "The transaction has already been completed".to_string())?;
+
         let row = sqlx::query(
             r#"
             SELECT 1
@@ -77,10 +90,11 @@ impl MasterRepository for MySqlMasterRepository {
         Ok(row.is_some())
     }
 
-    async fn update(
-        tx: &mut Transaction<'_, MySql>,
-        master: &mut Master
-    ) -> Result<(), String> {
+    async fn update(&self, master: &mut Master) -> Result<(), String> {
+        let mut tx_guard = self.tx.lock().await;
+        let tx = tx_guard.as_mut()
+            .ok_or_else(|| "The transaction has already been completed".to_string())?;
+
         let record = MasterRecord::from(&*master);
 
         sqlx::query(
@@ -98,10 +112,11 @@ impl MasterRepository for MySqlMasterRepository {
         Ok(())
     }
     
-    async fn remove(
-        tx: &mut Transaction<'_, MySql>,
-        user_id: UserId
-    ) -> Result<(), String> {
+    async fn remove(&self, user_id: UserId) -> Result<(), String> {
+        let mut tx_guard = self.tx.lock().await;
+        let tx = tx_guard.as_mut()
+            .ok_or_else(|| "The transaction has already been completed".to_string())?;
+
         sqlx::query(
             r#"
             DELETE FROM masters

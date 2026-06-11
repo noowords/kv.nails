@@ -1,3 +1,5 @@
+use std::sync::{ Arc };
+use tokio::sync::{ Mutex };
 use async_trait::{ async_trait };
 use sqlx::{ MySql, Transaction };
 
@@ -8,14 +10,23 @@ use crate::domain::{
 
 use super::super::models::{ ProfileRecord };
 
-pub struct MySqlProfileRepository;
+pub struct MySqlProfileRepository {
+    tx: Arc<Mutex<Option<Transaction<'static, MySql>>>>
+}
+
+impl MySqlProfileRepository {
+    pub fn new(tx: Arc<Mutex<Option<Transaction<'static, MySql>>>>) -> Self {
+        Self { tx }
+    }
+}
 
 #[async_trait]
 impl ProfileRepository for MySqlProfileRepository {
-    async fn create(
-        tx: &mut Transaction<'_, MySql>,
-        profile: &mut Profile
-    ) -> Result<(), String> {
+    async fn create(&self, profile: &mut Profile) -> Result<(), String> {
+        let mut tx_guard = self.tx.lock().await;
+        let tx = tx_guard.as_mut()
+            .ok_or_else(|| "The transaction has already been completed".to_string())?;
+
         sqlx::query(
             r#"
             INSERT INTO profiles (user_id, first_name, last_name, avatar_url, bio)
@@ -34,10 +45,11 @@ impl ProfileRepository for MySqlProfileRepository {
         Ok(())
     }
     
-    async fn get_by_user_id(
-        tx: &mut Transaction<'_, MySql>,
-        user_id: UserId
-    ) -> Result<Option<Profile>, String> {
+    async fn get_by_user_id(&self, user_id: UserId) -> Result<Option<Profile>, String> {
+        let mut tx_guard = self.tx.lock().await;
+        let tx = tx_guard.as_mut()
+            .ok_or_else(|| "The transaction has already been completed".to_string())?;
+
         let profile_record: Option<ProfileRecord> = sqlx::query_as(
             r#"
             SELECT user_id, first_name, last_name, avatar_url, bio
@@ -56,10 +68,11 @@ impl ProfileRepository for MySqlProfileRepository {
         }
     }
     
-    async fn exists(
-        tx: &mut Transaction<'_, MySql>,
-        user_id: UserId
-    ) -> Result<bool, String> {
+    async fn exists(&self, user_id: UserId) -> Result<bool, String> {
+        let mut tx_guard = self.tx.lock().await;
+        let tx = tx_guard.as_mut()
+            .ok_or_else(|| "The transaction has already been completed".to_string())?;
+
         let row = sqlx::query(
             r#"
             SELECT 1
@@ -76,10 +89,11 @@ impl ProfileRepository for MySqlProfileRepository {
         Ok(row.is_some())
     }
     
-    async fn update(
-        tx: &mut Transaction<'_, MySql>,
-        profile: &mut Profile
-    ) -> Result<(), String> {
+    async fn update(&self, profile: &mut Profile) -> Result<(), String> {
+        let mut tx_guard = self.tx.lock().await;
+        let tx = tx_guard.as_mut()
+            .ok_or_else(|| "The transaction has already been completed".to_string())?;
+
         let profile_record = ProfileRecord::from(&*profile);
 
         sqlx::query(
@@ -101,10 +115,11 @@ impl ProfileRepository for MySqlProfileRepository {
         Ok(())
     }
     
-    async fn remove(
-        tx: &mut Transaction<'_, MySql>,
-        user_id: UserId
-    ) -> Result<(), String> {
+    async fn remove(&self, user_id: UserId) -> Result<(), String> {
+        let mut tx_guard = self.tx.lock().await;
+        let tx = tx_guard.as_mut()
+            .ok_or_else(|| "The transaction has already been completed".to_string())?;
+
         sqlx::query(
             r#"
             DELETE FROM profiles

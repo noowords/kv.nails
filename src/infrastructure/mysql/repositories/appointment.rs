@@ -1,4 +1,5 @@
-use chrono::{ NaiveDate };
+use std::sync::{ Arc };
+use tokio::sync::{ Mutex };
 use async_trait::{ async_trait };
 use sqlx::{ MySql, Transaction };
 
@@ -9,14 +10,23 @@ use crate::domain::appointment::{
 
 use super::super::models::{ AppointmentRecord };
 
-pub struct MySqlAppointmentRepository;
+pub struct MySqlAppointmentRepository {
+    tx: Arc<Mutex<Option<Transaction<'static, MySql>>>>
+}
+
+impl MySqlAppointmentRepository {
+    pub fn new(tx: Arc<Mutex<Option<Transaction<'static, MySql>>>>) -> Self {
+        Self { tx }
+    }
+}
 
 #[async_trait]
 impl AppointmentRepository for MySqlAppointmentRepository {
-    async fn create(
-        tx: &mut Transaction<'_, MySql>,
-        appointment: Appointment
-    ) -> Result<(), String> {
+    async fn create(&self, appointment: Appointment) -> Result<(), String> {
+        let mut tx_guard = self.tx.lock().await;
+        let tx = tx_guard.as_mut()
+            .ok_or_else(|| "The transaction has already been completed".to_string())?;
+
         sqlx::query(
             r#"
             INSERT INTO appointments (id, master_id, client_id, date, time, status, created_at)
@@ -36,10 +46,11 @@ impl AppointmentRepository for MySqlAppointmentRepository {
         Ok(())
     }
     
-    async fn get_by_id(
-        tx: &mut Transaction<'_, MySql>,
-        id: AppointmentId
-    ) -> Result<Option<Appointment>, String> {
+    async fn get_by_id(&self, id: AppointmentId) -> Result<Option<Appointment>, String> {
+        let mut tx_guard = self.tx.lock().await;
+        let tx = tx_guard.as_mut()
+            .ok_or_else(|| "The transaction has already been completed".to_string())?;
+
         let appointment_record: Option<AppointmentRecord> = sqlx::query_as(
             r#"
             SELECT id, master_id, client_id, date, time, status
@@ -58,10 +69,11 @@ impl AppointmentRepository for MySqlAppointmentRepository {
         }
     }
     
-    async fn exists(
-        tx: &mut Transaction<'_, MySql>,
-        id: AppointmentId
-    ) -> Result<bool, String> {
+    async fn exists(&self, id: AppointmentId) -> Result<bool, String> {
+        let mut tx_guard = self.tx.lock().await;
+        let tx = tx_guard.as_mut()
+            .ok_or_else(|| "The transaction has already been completed".to_string())?;
+
         let row = sqlx::query(
             r#"
             SELECT 1
@@ -78,10 +90,11 @@ impl AppointmentRepository for MySqlAppointmentRepository {
         Ok(row.is_some())
     }
     
-    async fn update(
-        tx: &mut Transaction<'_, MySql>,
-        appointment: Appointment
-    ) -> Result<(), String> {
+    async fn update(&self, appointment: Appointment) -> Result<(), String> {
+        let mut tx_guard = self.tx.lock().await;
+        let tx = tx_guard.as_mut()
+            .ok_or_else(|| "The transaction has already been completed".to_string())?;
+
         let record = AppointmentRecord::from(&appointment);
 
         sqlx::query(
@@ -100,10 +113,11 @@ impl AppointmentRepository for MySqlAppointmentRepository {
         Ok(())
     }
     
-    async fn remove(
-        tx: &mut Transaction<'_, MySql>,
-        id: AppointmentId
-    ) -> Result<(), String> {
+    async fn remove(&self, id: AppointmentId) -> Result<(), String> {
+        let mut tx_guard = self.tx.lock().await;
+        let tx = tx_guard.as_mut()
+            .ok_or_else(|| "The transaction has already been completed".to_string())?;
+
         sqlx::query(
             r#"
             DELETE FROM appointments
