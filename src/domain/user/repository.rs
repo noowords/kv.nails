@@ -1,5 +1,4 @@
 use async_trait::{ async_trait };
-use sqlx::{ MySql, Transaction };
 
 use super::{
     User,
@@ -8,28 +7,9 @@ use super::{
 
 #[async_trait]
 pub trait UserRepository {
-    async fn create(
-        tx: &mut Transaction<'_, MySql>,
-        user: &mut User
-    ) -> Result<(), String>;
-    
-    async fn get_by_id(
-        tx: &mut Transaction<'_, MySql>,
-        id: UserId
-    ) -> Result<Option<User>, String>;
-    
-    async fn exists(
-        tx: &mut Transaction<'_, MySql>,
-        id: UserId
-    ) -> Result<bool, String>;
-
-    async fn update(
-        tx: &mut Transaction<'_, MySql>,
-        user: &mut User
-    ) -> Result<(), String>;
-    
-    async fn remove(
-        tx: &mut Transaction<'_, MySql>,
-        id: UserId
-    ) -> Result<(), String>;
+    async fn create(&self, user: &mut User) -> Result<(), String>;
+    async fn get_by_id(&self, id: UserId) -> Result<Option<User>, String>;
+    async fn exists(&self, id: UserId) -> Result<bool, String>;
+    async fn update(&self, user: &mut User) -> Result<(), String>;
+    async fn remove(&self, id: UserId) -> Result<(), String>;
 }
