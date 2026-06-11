@@ -6,7 +6,7 @@ use super::{
 };
 
 #[async_trait]
-pub trait AppointmentRepository {
+pub trait AppointmentRepository: Send + Sync {
     async fn create(&self, appointment: Appointment) -> Result<(), String>;
     async fn get_by_id(&self, id: AppointmentId) -> Result<Option<Appointment>, String>;
     async fn exists(&self, id: AppointmentId) -> Result<bool, String>;
