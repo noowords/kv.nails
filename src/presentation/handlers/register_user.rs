@@ -1,16 +1,10 @@
-use std::sync::{ Arc };
-use tokio::sync::Mutex;
 use axum::{
     extract::{ State },
     http::{ StatusCode }
 };
 
-use crate::infrastructure::mysql::{
-    shared::{ MySqlUnitOfWork },
-    user::{ MySqlUserRepository },
-    profile::{ MySqlProfileRepository }
-};
-use crate::application::use_cases::register_user::{ RegisterUserCommand, RegisterUserUseCase };
+use crate::infrastructure::mysql::shared::{ MySqlTxContext };
+use crate::application::use_cases::register_user::{ RegisterUserCommand };
 
 use super::super::{ AppState };
 
@@ -20,17 +14,8 @@ pub async fn register_user(
     let tx = state.db_pool().begin()
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-    let shared_tx = Arc::new(Mutex::new(Some(tx)));
 
-    let user_repository = MySqlUserRepository::new(shared_tx.clone()); 
-    let profile_repository = MySqlProfileRepository::new(shared_tx.clone()); 
-    let uow = MySqlUnitOfWork::new(shared_tx);
-
-    let uc = RegisterUserUseCase::new(
-        Box::new(user_repository),
-        Box::new(profile_repository),
-        Box::new(uow)
-    );
+    let mut ctx = MySqlTxContext::new(tx);
 
     let cmd = RegisterUserCommand::new(
         Some(String::from("00000000000")),
@@ -40,9 +25,13 @@ pub async fn register_user(
         None
     );
 
-    uc.execute(cmd)
+    state.register_user_uc.execute(&mut ctx, cmd)
         .await
         .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+
+    ctx.tx.commit()
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     Ok(StatusCode::CREATED)
 }

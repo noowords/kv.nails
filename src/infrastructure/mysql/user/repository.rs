@@ -1,31 +1,35 @@
-use std::sync::{ Arc };
-use tokio::sync::{ Mutex };
 use async_trait::{ async_trait };
-use sqlx::{ MySql, Transaction };
 
-use crate::domain::user::{
-    User, UserRepository,
-    value_objects::{ UserId }
+use crate::domain::{
+    shared::{ TxContext },
+    user::{
+        User, UserRepository,
+        value_objects::{ UserId }
+    }
 };
+
+use super::super::shared::{ MySqlTxContext };
 
 use super::{ MySqlUserModel };
 
-pub struct MySqlUserRepository {
-    tx: Arc<Mutex<Option<Transaction<'static, MySql>>>>
-}
+pub struct MySqlUserRepository;
 
 impl MySqlUserRepository {
-    pub fn new(tx: Arc<Mutex<Option<Transaction<'static, MySql>>>>) -> Self {
-        Self { tx }
+    pub fn new() -> Self {
+        Self
     }
 }
 
 #[async_trait]
 impl UserRepository for MySqlUserRepository {
-    async fn create(&self, user: &mut User) -> Result<(), String> {
-        let mut tx_guard = self.tx.lock().await;
-        let tx = tx_guard.as_mut()
-            .ok_or_else(|| "The transaction has already been completed".to_string())?;
+    async fn create(
+        &self,
+        ctx: &mut dyn TxContext,
+        user: &mut User
+    ) -> Result<(), String> {
+        let ctx = ctx
+            .downcast_mut::<MySqlTxContext>()
+            .ok_or_else(|| "Invalid transaction context type".to_string())?;
 
         sqlx::query(
             r#"
@@ -36,19 +40,23 @@ impl UserRepository for MySqlUserRepository {
             .bind(user.id().value())
             .bind(user.phone().as_ref().map(|p| p.value().clone()))
             .bind(user.role().as_str())
-            .execute(&mut **tx)
+            .execute(&mut *ctx.tx)
             .await
             .map_err(|e| format!("User insert error: {}", e))?;
 
         Ok(())
     }
     
-    async fn get_by_id(&self, id: UserId) -> Result<Option<User>, String> {
-        let mut tx_guard = self.tx.lock().await;
-        let tx = tx_guard.as_mut()
-            .ok_or_else(|| "The transaction has already been completed".to_string())?;
+    async fn get_by_id(
+        &self,
+        ctx: &mut dyn TxContext,
+        id: UserId
+    ) -> Result<Option<User>, String> {
+        let ctx = ctx
+            .downcast_mut::<MySqlTxContext>()
+            .ok_or_else(|| "Invalid transaction context type".to_string())?;
 
-        let user_record: Option<MySqlUserModel> = sqlx::query_as(
+        let model: Option<MySqlUserModel> = sqlx::query_as(
             r#"
             SELECT id, role, phone
             FROM users
@@ -56,20 +64,24 @@ impl UserRepository for MySqlUserRepository {
             "#
         )
             .bind(id.value())
-            .fetch_optional(&mut **tx)
+            .fetch_optional(&mut *ctx.tx)
             .await
             .map_err(|e| format!("Find user error: {}", e))?;
 
-        match user_record {
-            Some(ur) => Ok(Some(User::try_from(ur)?)),
+        match model {
+            Some(model) => Ok(Some(User::try_from(model)?)),
             None => Ok(None)
         }
     }
     
-    async fn exists(&self, id: UserId) -> Result<bool, String> {
-        let mut tx_guard = self.tx.lock().await;
-        let tx = tx_guard.as_mut()
-            .ok_or_else(|| "The transaction has already been completed".to_string())?;
+    async fn exists(
+        &self,
+        ctx: &mut dyn TxContext,
+        id: UserId
+    ) -> Result<bool, String> {
+        let ctx = ctx
+            .downcast_mut::<MySqlTxContext>()
+            .ok_or_else(|| "Invalid transaction context type".to_string())?;
 
         let row = sqlx::query(
             r#"
@@ -80,19 +92,23 @@ impl UserRepository for MySqlUserRepository {
             "#
         )
             .bind(id.value())
-            .fetch_optional(&mut **tx)
+            .fetch_optional(&mut *ctx.tx)
             .await
             .map_err(|e| format!("Check user existence error: {}", e))?;
         
         Ok(row.is_some())
     }
 
-    async fn update(&self, user: &mut User) -> Result<(), String> {
-        let mut tx_guard = self.tx.lock().await;
-        let tx = tx_guard.as_mut()
-            .ok_or_else(|| "The transaction has already been completed".to_string())?;
+    async fn update(
+        &self,
+        ctx: &mut dyn TxContext,
+        user: &mut User
+    ) -> Result<(), String> {
+        let ctx = ctx
+            .downcast_mut::<MySqlTxContext>()
+            .ok_or_else(|| "Invalid transaction context type".to_string())?;
 
-        let user_record = MySqlUserModel::from(&*user);
+        let model = MySqlUserModel::from(&*user);
 
         sqlx::query(
             r#"
@@ -101,20 +117,24 @@ impl UserRepository for MySqlUserRepository {
             WHERE id = ?
             "#
         )
-            .bind(user_record.phone())
-            .bind(user_record.role())
-            .bind(user_record.id())
-            .execute(&mut **tx)
+            .bind(model.phone())
+            .bind(model.role())
+            .bind(model.id())
+            .execute(&mut *ctx.tx)
             .await
             .map_err(|e| format!("User update error: {}", e))?;
 
         Ok(())
     }
     
-    async fn remove(&self, id: UserId) -> Result<(), String> {
-        let mut tx_guard = self.tx.lock().await;
-        let tx = tx_guard.as_mut()
-            .ok_or_else(|| "The transaction has already been completed".to_string())?;
+    async fn remove(
+        &self,
+        ctx: &mut dyn TxContext,
+        id: UserId
+    ) -> Result<(), String> {
+        let ctx = ctx
+            .downcast_mut::<MySqlTxContext>()
+            .ok_or_else(|| "Invalid transaction context type".to_string())?;
 
         sqlx::query(
             r#"
@@ -123,7 +143,7 @@ impl UserRepository for MySqlUserRepository {
             "#
         )
             .bind(id.value())
-            .execute(&mut **tx)
+            .execute(&mut *ctx.tx)
             .await
             .map_err(|e| format!("User delete error: {}", e))?;
         

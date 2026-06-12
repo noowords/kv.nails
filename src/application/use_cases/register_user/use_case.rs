@@ -1,5 +1,7 @@
+use std::sync::{ Arc };
+
 use crate::domain::{
-    shared::{ UnitOfWork },
+    shared::{ TxContext },
     user::{
         User, UserRepository,
         value_objects::{ UserPhone }
@@ -10,25 +12,26 @@ use crate::domain::{
 use super::{ RegisterUserCommand };
 
 pub struct RegisterUserUseCase {
-    user_repository: Box<dyn UserRepository>,
-    profile_repository: Box<dyn ProfileRepository>,
-    uow: Box<dyn UnitOfWork>
+    user_repository: Arc<dyn UserRepository>,
+    profile_repository: Arc<dyn ProfileRepository>
 }
 
 impl RegisterUserUseCase {
     pub fn new(
-        user_repository: Box<dyn UserRepository>,
-        profile_repository: Box<dyn ProfileRepository>,
-        uow: Box<dyn UnitOfWork>
+        user_repository: Arc<dyn UserRepository>,
+        profile_repository: Arc<dyn ProfileRepository>
     ) -> Self {
         Self {
             user_repository,
-            profile_repository,
-            uow
+            profile_repository
         }
     }
 
-    pub async fn execute(self, cmd: RegisterUserCommand) -> Result<(), String> {
+    pub async fn execute(
+        &self,
+        ctx: &mut dyn TxContext,
+        cmd: RegisterUserCommand
+    ) -> Result<(), String> {
         let mut user = User::new(
             None,
             None, 
@@ -38,7 +41,7 @@ impl RegisterUserUseCase {
             }
         );
 
-        self.user_repository.create(&mut user).await?;
+        self.user_repository.create(ctx, &mut user).await?;
 
         let mut profile = Profile::new(
             user.id(),
@@ -48,9 +51,7 @@ impl RegisterUserUseCase {
             cmd.profile_bio
         );
 
-        self.profile_repository.create(&mut profile).await?;
-
-        self.uow.commit().await?;
+        self.profile_repository.create(ctx, &mut profile).await?;
 
         Ok(())
     }

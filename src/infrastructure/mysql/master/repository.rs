@@ -1,32 +1,34 @@
-use std::sync::{ Arc };
-use tokio::sync::{ Mutex };
 use async_trait::{ async_trait };
-use sqlx::{ MySql, Transaction };
 use serde_json;
 
 use crate::domain::{
+    shared::{ TxContext },
     user::value_objects::{ UserId },
     master::{ Master, MasterRepository }
 };
 
+use super::super::shared::{ MySqlTxContext };
+
 use super::{ MySqlMasterModel };
 
-pub struct MySqlMasterRepository {
-    tx: Arc<Mutex<Option<Transaction<'static, MySql>>>>
-}
+pub struct MySqlMasterRepository;
 
 impl MySqlMasterRepository {
-    pub fn new(tx: Arc<Mutex<Option<Transaction<'static, MySql>>>>) -> Self {
-        Self { tx }
+    pub fn new() -> Self {
+        Self
     }
 }
 
 #[async_trait]
 impl MasterRepository for MySqlMasterRepository {
-    async fn create(&self, master: &mut Master) -> Result<(), String> {
-        let mut tx_guard = self.tx.lock().await;
-        let tx = tx_guard.as_mut()
-            .ok_or_else(|| "The transaction has already been completed".to_string())?;
+    async fn create(
+        &self,
+        ctx: &mut dyn TxContext,
+        master: &mut Master
+    ) -> Result<(), String> {
+        let ctx = ctx
+            .downcast_mut::<MySqlTxContext>()
+            .ok_or_else(|| "Invalid transaction context type".to_string())?;
 
         let schedule_json = serde_json::to_value(master.schedule())
             .map_err(|e| format!("Schedule serializing error: {}", e))?;
@@ -39,19 +41,23 @@ impl MasterRepository for MySqlMasterRepository {
         )
             .bind(master.user_id().value())
             .bind(&schedule_json)
-            .execute(&mut **tx)
+            .execute(&mut *ctx.tx)
             .await
             .map_err(|e| format!("Master insert error: {}", e))?;
 
         Ok(())
     }
     
-    async fn get_by_user_id(&self, user_id: UserId) -> Result<Option<Master>, String> {
-        let mut tx_guard = self.tx.lock().await;
-        let tx = tx_guard.as_mut()
-            .ok_or_else(|| "The transaction has already been completed".to_string())?;
+    async fn get_by_user_id(
+        &self,
+        ctx: &mut dyn TxContext,
+        user_id: UserId
+    ) -> Result<Option<Master>, String> {
+        let ctx = ctx
+            .downcast_mut::<MySqlTxContext>()
+            .ok_or_else(|| "Invalid transaction context type".to_string())?;
 
-        let master_record: Option<MySqlMasterModel> = sqlx::query_as(
+        let model: Option<MySqlMasterModel> = sqlx::query_as(
             r#"
             SELECT user_id, schedule
             FROM masters
@@ -59,20 +65,24 @@ impl MasterRepository for MySqlMasterRepository {
             "#
         )
             .bind(user_id.value())
-            .fetch_optional(&mut **tx)
+            .fetch_optional(&mut *ctx.tx)
             .await
             .map_err(|e| format!("Master find error: {}", e))?;
 
-        match master_record {
-            Some(mr) => Ok(Some(Master::try_from(mr)?)),
+        match model {
+            Some(model) => Ok(Some(Master::try_from(model)?)),
             None => Ok(None)
         }
     }
     
-    async fn exists(&self, user_id: UserId) -> Result<bool, String> {
-        let mut tx_guard = self.tx.lock().await;
-        let tx = tx_guard.as_mut()
-            .ok_or_else(|| "The transaction has already been completed".to_string())?;
+    async fn exists(
+        &self,
+        ctx: &mut dyn TxContext,
+        user_id: UserId
+    ) -> Result<bool, String> {
+        let ctx = ctx
+            .downcast_mut::<MySqlTxContext>()
+            .ok_or_else(|| "Invalid transaction context type".to_string())?;
 
         let row = sqlx::query(
             r#"
@@ -83,19 +93,23 @@ impl MasterRepository for MySqlMasterRepository {
             "#
         )
             .bind(user_id.value())
-            .fetch_optional(&mut **tx)
+            .fetch_optional(&mut *ctx.tx)
             .await
             .map_err(|e| format!("Check master existence error: {}", e))?;
         
         Ok(row.is_some())
     }
 
-    async fn update(&self, master: &mut Master) -> Result<(), String> {
-        let mut tx_guard = self.tx.lock().await;
-        let tx = tx_guard.as_mut()
-            .ok_or_else(|| "The transaction has already been completed".to_string())?;
+    async fn update(
+        &self,
+        ctx: &mut dyn TxContext,
+        master: &mut Master
+    ) -> Result<(), String> {
+        let ctx = ctx
+            .downcast_mut::<MySqlTxContext>()
+            .ok_or_else(|| "Invalid transaction context type".to_string())?;
 
-        let record = MySqlMasterModel::from(&*master);
+        let model = MySqlMasterModel::from(&*master);
 
         sqlx::query(
             r#"
@@ -103,19 +117,23 @@ impl MasterRepository for MySqlMasterRepository {
             WHERE user_id = ?
             "#
         )
-            .bind(record.schedule())
-            .bind(record.user_id())
-            .execute(&mut **tx)
+            .bind(model.schedule())
+            .bind(model.user_id())
+            .execute(&mut *ctx.tx)
             .await
             .map_err(|e| format!("Master update error: {}", e))?;
 
         Ok(())
     }
     
-    async fn remove(&self, user_id: UserId) -> Result<(), String> {
-        let mut tx_guard = self.tx.lock().await;
-        let tx = tx_guard.as_mut()
-            .ok_or_else(|| "The transaction has already been completed".to_string())?;
+    async fn remove(
+        &self,
+        ctx: &mut dyn TxContext,
+        user_id: UserId
+    ) -> Result<(), String> {
+        let ctx = ctx
+            .downcast_mut::<MySqlTxContext>()
+            .ok_or_else(|| "Invalid transaction context type".to_string())?;
 
         sqlx::query(
             r#"
@@ -124,7 +142,7 @@ impl MasterRepository for MySqlMasterRepository {
             "#
         )
             .bind(user_id.value())
-            .execute(&mut **tx)
+            .execute(&mut *ctx.tx)
             .await
             .map_err(|e| format!("Master delete error: {}", e))?;
         

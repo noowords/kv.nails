@@ -1,31 +1,33 @@
-use std::sync::{ Arc };
-use tokio::sync::{ Mutex };
 use async_trait::{ async_trait };
-use sqlx::{ MySql, Transaction };
 
 use crate::domain::{
+    shared::{ TxContext },
     user::value_objects::{ UserId },
     profile::{ Profile, ProfileRepository }
 };
 
+use super::super::shared::{ MySqlTxContext };
+
 use super::{ MySqlProfileModel };
 
-pub struct MySqlProfileRepository {
-    tx: Arc<Mutex<Option<Transaction<'static, MySql>>>>
-}
+pub struct MySqlProfileRepository;
 
 impl MySqlProfileRepository {
-    pub fn new(tx: Arc<Mutex<Option<Transaction<'static, MySql>>>>) -> Self {
-        Self { tx }
+    pub fn new() -> Self {
+        Self
     }
 }
 
 #[async_trait]
 impl ProfileRepository for MySqlProfileRepository {
-    async fn create(&self, profile: &mut Profile) -> Result<(), String> {
-        let mut tx_guard = self.tx.lock().await;
-        let tx = tx_guard.as_mut()
-            .ok_or_else(|| "The transaction has already been completed".to_string())?;
+    async fn create(
+        &self,
+        ctx: &mut dyn TxContext,
+        profile: &mut Profile
+    ) -> Result<(), String> {
+        let ctx = ctx
+            .downcast_mut::<MySqlTxContext>()
+            .ok_or_else(|| "Invalid transaction context type".to_string())?;
 
         sqlx::query(
             r#"
@@ -38,19 +40,23 @@ impl ProfileRepository for MySqlProfileRepository {
             .bind(profile.last_name())
             .bind(profile.avatar_url())
             .bind(profile.bio())
-            .execute(&mut **tx)
+            .execute(&mut *ctx.tx)
             .await
             .map_err(|e| format!("Profile insert error: {}", e))?;
 
         Ok(())
     }
     
-    async fn get_by_user_id(&self, user_id: UserId) -> Result<Option<Profile>, String> {
-        let mut tx_guard = self.tx.lock().await;
-        let tx = tx_guard.as_mut()
-            .ok_or_else(|| "The transaction has already been completed".to_string())?;
+    async fn get_by_user_id(
+        &self,
+        ctx: &mut dyn TxContext,
+        user_id: UserId
+    ) -> Result<Option<Profile>, String> {
+        let ctx = ctx
+            .downcast_mut::<MySqlTxContext>()
+            .ok_or_else(|| "Invalid transaction context type".to_string())?;
 
-        let profile_record: Option<MySqlProfileModel> = sqlx::query_as(
+        let model: Option<MySqlProfileModel> = sqlx::query_as(
             r#"
             SELECT user_id, first_name, last_name, avatar_url, bio
             FROM profiles
@@ -58,20 +64,24 @@ impl ProfileRepository for MySqlProfileRepository {
             "#
         )
             .bind(user_id.value())
-            .fetch_optional(&mut **tx)
+            .fetch_optional(&mut *ctx.tx)
             .await
             .map_err(|e| format!("Find profile error: {}", e))?;
 
-        match profile_record {
-            Some(pr) => Ok(Some(Profile::try_from(pr)?)),
+        match model {
+            Some(model) => Ok(Some(Profile::try_from(model)?)),
             None => Ok(None),
         }
     }
     
-    async fn exists(&self, user_id: UserId) -> Result<bool, String> {
-        let mut tx_guard = self.tx.lock().await;
-        let tx = tx_guard.as_mut()
-            .ok_or_else(|| "The transaction has already been completed".to_string())?;
+    async fn exists(
+        &self,
+        ctx: &mut dyn TxContext,
+        user_id: UserId
+    ) -> Result<bool, String> {
+        let ctx = ctx
+            .downcast_mut::<MySqlTxContext>()
+            .ok_or_else(|| "Invalid transaction context type".to_string())?;
 
         let row = sqlx::query(
             r#"
@@ -82,19 +92,23 @@ impl ProfileRepository for MySqlProfileRepository {
             "#
         )
             .bind(user_id.value())
-            .fetch_optional(&mut **tx)
+            .fetch_optional(&mut *ctx.tx)
             .await
             .map_err(|e| format!("Check profile existence error: {}", e))?;
 
         Ok(row.is_some())
     }
     
-    async fn update(&self, profile: &mut Profile) -> Result<(), String> {
-        let mut tx_guard = self.tx.lock().await;
-        let tx = tx_guard.as_mut()
-            .ok_or_else(|| "The transaction has already been completed".to_string())?;
+    async fn update(
+        &self,
+        ctx: &mut dyn TxContext,
+        profile: &mut Profile
+    ) -> Result<(), String> {
+        let ctx = ctx
+            .downcast_mut::<MySqlTxContext>()
+            .ok_or_else(|| "Invalid transaction context type".to_string())?;
 
-        let profile_record = MySqlProfileModel::from(&*profile);
+        let model = MySqlProfileModel::from(&*profile);
 
         sqlx::query(
             r#"
@@ -103,22 +117,26 @@ impl ProfileRepository for MySqlProfileRepository {
             WHERE user_id = ?
             "#
         )
-            .bind(profile_record.first_name())
-            .bind(profile_record.last_name())
-            .bind(profile_record.avatar_url())
-            .bind(profile_record.bio())
-            .bind(profile_record.user_id())
-            .execute(&mut **tx)
+            .bind(model.first_name())
+            .bind(model.last_name())
+            .bind(model.avatar_url())
+            .bind(model.bio())
+            .bind(model.user_id())
+            .execute(&mut *ctx.tx)
             .await
             .map_err(|e| format!("Profile update error: {}", e))?;
 
         Ok(())
     }
     
-    async fn remove(&self, user_id: UserId) -> Result<(), String> {
-        let mut tx_guard = self.tx.lock().await;
-        let tx = tx_guard.as_mut()
-            .ok_or_else(|| "The transaction has already been completed".to_string())?;
+    async fn remove(
+        &self,
+        ctx: &mut dyn TxContext,
+        user_id: UserId
+    ) -> Result<(), String> {
+        let ctx = ctx
+            .downcast_mut::<MySqlTxContext>()
+            .ok_or_else(|| "Invalid transaction context type".to_string())?;
 
         sqlx::query(
             r#"
@@ -127,7 +145,7 @@ impl ProfileRepository for MySqlProfileRepository {
             "#
         )
             .bind(user_id.value())
-            .execute(&mut **tx)
+            .execute(&mut *ctx.tx)
             .await
             .map_err(|e| format!("Profile delete error: {}", e))?;
 

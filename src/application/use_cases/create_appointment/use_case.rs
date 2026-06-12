@@ -1,27 +1,30 @@
+use std::sync::{ Arc };
+
 use crate::domain::{
-    shared::{ UnitOfWork },
+    shared::{ TxContext },
     appointment::{ Appointment, AppointmentRepository }
 };
 
 use super::{ CreateAppointmentCommand };
 
 pub struct CreateAppointmentUseCase {
-    appointment_repository: Box<dyn AppointmentRepository>,
-    uow: Box<dyn UnitOfWork>
+    appointment_repository: Arc<dyn AppointmentRepository>
 }
 
 impl CreateAppointmentUseCase {
     pub fn new(
-        appointment_repository: Box<dyn AppointmentRepository>,
-        uow: Box<dyn UnitOfWork>
+        appointment_repository: Arc<dyn AppointmentRepository>
     ) -> Self {
         Self {
-            appointment_repository,
-            uow
+            appointment_repository
         }
     }
 
-    pub async fn execute(self, cmd: CreateAppointmentCommand) -> Result<(), String> {
+    pub async fn execute(
+        &self,
+        ctx: &mut dyn TxContext,
+        cmd: CreateAppointmentCommand
+    ) -> Result<(), String> {
         let appointment = Appointment::new(
             None,
             cmd.master_id,
@@ -31,9 +34,7 @@ impl CreateAppointmentUseCase {
             None
         );
 
-        self.appointment_repository.create(appointment).await?;
-
-        self.uow.commit().await?;
+        self.appointment_repository.create(ctx, appointment).await?;
 
         Ok(())
     }
