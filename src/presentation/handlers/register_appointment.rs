@@ -9,8 +9,8 @@ use axum::{
 
 use crate::domain::user::value_objects::{ UserId };
 use crate::infrastructure::mysql::{
-    MySqlUnitOfWork,
-    repositories::{ MySqlAppointmentRepository }
+    shared::{ MySqlUnitOfWork },
+    appointment::{ MySqlAppointmentRepository }
 };
 use crate::application::use_cases::create_appointment::{ CreateAppointmentCommand, CreateAppointmentUseCase };
 

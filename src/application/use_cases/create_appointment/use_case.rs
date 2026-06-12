@@ -1,5 +1,5 @@
 use crate::domain::{
-    UnitOfWork,
+    shared::{ UnitOfWork },
     appointment::{ Appointment, AppointmentRepository }
 };
 

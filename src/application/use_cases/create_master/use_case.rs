@@ -1,5 +1,5 @@
 use crate::domain::{
-    UnitOfWork,
+    shared::{ UnitOfWork },
     master::{ Master, MasterRepository }
 };
 

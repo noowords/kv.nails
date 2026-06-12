@@ -6,8 +6,9 @@ use axum::{
 };
 
 use crate::infrastructure::mysql::{
-    MySqlUnitOfWork,
-    repositories::{ MySqlUserRepository, MySqlProfileRepository }
+    shared::{ MySqlUnitOfWork },
+    user::{ MySqlUserRepository },
+    profile::{ MySqlProfileRepository }
 };
 use crate::application::use_cases::register_user::{ RegisterUserCommand, RegisterUserUseCase };
 
