@@ -1,5 +1,5 @@
 use chrono::{ NaiveDate, NaiveTime };
-use crate::domain::user::value_objects::{ UserId };
+use crate::domain::models::user::value_objects::{ UserId };
 
 pub struct CreateAppointmentCommand {
     pub master_id: UserId,

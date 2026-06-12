@@ -1,7 +1,7 @@
 use std::sync::{ Arc };
 
-use crate::domain::{
-    shared::{ TxContext },
+use crate::domain::shared::{ TxContext };
+use crate::domain::models::{
     user::{
         User, UserRepository,
         value_objects::{ UserPhone }

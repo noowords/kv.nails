@@ -1,7 +1,7 @@
 use std::sync::{ Arc };
 
-use crate::domain::{
-    shared::{ TxContext },
+use crate::domain::shared::{ TxContext };
+use crate::domain::models::{
     master::{ Master, MasterRepository }
 };
 

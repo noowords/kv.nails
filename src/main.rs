@@ -6,7 +6,7 @@ mod presentation;
 use std::sync::{ Arc };
 use sqlx::{ MySqlPool };
 
-use crate::infrastructure::mysql::{
+use crate::infrastructure::mysql::models::{
     user::{ MySqlUserRepository },
     profile::{ MySqlProfileRepository },
     master::{ MySqlMasterRepository },
@@ -17,7 +17,7 @@ use crate::application::use_cases::{
     create_master::{ CreateMasterUseCase },
     register_user::{ RegisterUserUseCase }
 };
-use crate::presentation::{ AppState, create_router, run };
+use crate::presentation::web::{ AppState, create_router, run };
 
 #[tokio::main]
 async fn main() {

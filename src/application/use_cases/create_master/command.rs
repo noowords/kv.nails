@@ -1,4 +1,4 @@
-use crate::domain::{
+use crate::domain::models::{
     user::value_objects::{ UserId },
     master::value_objects::{ Schedule }
 };
