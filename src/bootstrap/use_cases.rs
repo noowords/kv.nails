@@ -1,12 +1,14 @@
 use std::sync::{ Arc };
 
-use crate::domain::shared::{ RepositoryProvider };
-use crate::infrastructure::mysql::shared::{ MySqlUnitOfWorkFactory };
-use crate::application::use_cases::{
-    register_user::{ RegisterUserUseCase },
-    create_master::{ CreateMasterUseCase },
-    create_appointment::{ CreateAppointmentUseCase }
+use crate::application::{
+    shared::{ RepositoryProvider },
+    use_cases::{
+        register_user::{ RegisterUserUseCase },
+        create_master::{ CreateMasterUseCase },
+        create_appointment::{ CreateAppointmentUseCase }
+    }
 };
+use crate::infrastructure::mysql::shared::{ MySqlUnitOfWorkFactory };
 use crate::presentation::web::{ UseCases };
 
 pub fn build_use_cases(uow_factory: Arc<MySqlUnitOfWorkFactory>, provider: Arc<dyn RepositoryProvider>) -> Arc<UseCases> {

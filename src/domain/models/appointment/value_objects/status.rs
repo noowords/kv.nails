@@ -1,3 +1,5 @@
+use super::super::errors::{ AppointmentModelDomainError };
+
 #[derive(Clone, PartialEq)]
 pub enum AppointmentStatus {
     Pending,
@@ -34,9 +36,9 @@ impl From<AppointmentStatus> for String {
 }
 
 impl TryFrom<&str> for AppointmentStatus {
-    type Error = String;
+    type Error = AppointmentModelDomainError;
     
     fn try_from(s: &str) -> Result<Self, Self::Error> {
-        AppointmentStatus::from_str(s).ok_or_else(|| format!("Unknown status: {}", s))
+        AppointmentStatus::from_str(s).ok_or_else(|| AppointmentModelDomainError::InvalidStatus(s.to_string()))
     }
 }

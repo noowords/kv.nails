@@ -2,7 +2,7 @@ use async_trait::{ async_trait };
 
 use crate::domain::shared::{ UnitOfWork };
 use crate::domain::models::appointment::{
-    Appointment, AppointmentRepository,
+    Appointment, AppointmentRepository, AppointmentModelDomainError,
     value_objects::{ AppointmentId }
 };
 
@@ -24,11 +24,11 @@ impl AppointmentRepository for MySqlAppointmentRepository {
         &self,
         uow: &mut dyn UnitOfWork,
         appointment: Appointment
-    ) -> Result<(), String> {
+    ) -> Result<(), AppointmentModelDomainError> {
         let ctx = uow.ctx_mut()
             .as_any_mut()
             .downcast_mut::<MySqlTxContext>()
-            .ok_or_else(|| "UnitOfWork is not a MySqlUnitOfWork".to_string())?;
+            .ok_or_else(|| AppointmentModelDomainError::DatabaseError("Invalid UnitOfWork context".to_string()))?;
 
         sqlx::query(
             r#"
@@ -44,7 +44,7 @@ impl AppointmentRepository for MySqlAppointmentRepository {
             .bind(appointment.status().as_str())
             .execute(&mut *ctx.tx)
             .await
-            .map_err(|e| format!("Appointment insert error: {}", e))?;
+            .map_err(|e| AppointmentModelDomainError::DatabaseError(e.to_string()))?;
 
         Ok(())
     }
@@ -53,11 +53,11 @@ impl AppointmentRepository for MySqlAppointmentRepository {
         &self,
         uow: &mut dyn UnitOfWork,
         id: AppointmentId
-    ) -> Result<Option<Appointment>, String> {
+    ) -> Result<Option<Appointment>, AppointmentModelDomainError> {
         let ctx = uow.ctx_mut()
             .as_any_mut()
             .downcast_mut::<MySqlTxContext>()
-            .ok_or_else(|| "UnitOfWork is not a MySqlUnitOfWork".to_string())?;
+            .ok_or_else(|| AppointmentModelDomainError::DatabaseError("Invalid UnitOfWork context".to_string()))?;
 
         let row: Option<MySqlAppointmentRow> = sqlx::query_as(
             r#"
@@ -69,7 +69,7 @@ impl AppointmentRepository for MySqlAppointmentRepository {
             .bind(id.value())
             .fetch_optional(&mut *ctx.tx)
             .await
-            .map_err(|e| format!("Find appointment error: {}", e))?;
+            .map_err(|e| AppointmentModelDomainError::DatabaseError(e.to_string()))?;
 
         match row {
             Some(row) => Ok(Some(Appointment::try_from(row)?)),
@@ -81,11 +81,11 @@ impl AppointmentRepository for MySqlAppointmentRepository {
         &self,
         uow: &mut dyn UnitOfWork,
         id: AppointmentId
-    ) -> Result<bool, String> {
+    ) -> Result<bool, AppointmentModelDomainError> {
         let ctx = uow.ctx_mut()
             .as_any_mut()
             .downcast_mut::<MySqlTxContext>()
-            .ok_or_else(|| "UnitOfWork is not a MySqlUnitOfWork".to_string())?;
+            .ok_or_else(|| AppointmentModelDomainError::DatabaseError("Invalid UnitOfWork context".to_string()))?;
 
         let row = sqlx::query(
             r#"
@@ -98,7 +98,7 @@ impl AppointmentRepository for MySqlAppointmentRepository {
             .bind(id.value())
             .fetch_optional(&mut *ctx.tx)
             .await
-            .map_err(|e| format!("Check appointment existence error: {}", e))?;
+            .map_err(|e| AppointmentModelDomainError::DatabaseError(e.to_string()))?;
         
         Ok(row.is_some())
     }
@@ -107,11 +107,11 @@ impl AppointmentRepository for MySqlAppointmentRepository {
         &self,
         uow: &mut dyn UnitOfWork,
         appointment: Appointment
-    ) -> Result<(), String> {
+    ) -> Result<(), AppointmentModelDomainError> {
         let ctx = uow.ctx_mut()
             .as_any_mut()
             .downcast_mut::<MySqlTxContext>()
-            .ok_or_else(|| "UnitOfWork is not a MySqlUnitOfWork".to_string())?;
+            .ok_or_else(|| AppointmentModelDomainError::DatabaseError("Invalid UnitOfWork context".to_string()))?;
 
         let row = MySqlAppointmentRow::from(&appointment);
 
@@ -126,7 +126,7 @@ impl AppointmentRepository for MySqlAppointmentRepository {
             .bind(row.id())
             .execute(&mut *ctx.tx)
             .await
-            .map_err(|e| format!("Appointment update error: {}", e))?;
+            .map_err(|e| AppointmentModelDomainError::DatabaseError(e.to_string()))?;
         
         Ok(())
     }
@@ -135,11 +135,11 @@ impl AppointmentRepository for MySqlAppointmentRepository {
         &self,
         uow: &mut dyn UnitOfWork,
         id: AppointmentId
-    ) -> Result<(), String> {
+    ) -> Result<(), AppointmentModelDomainError> {
         let ctx = uow.ctx_mut()
             .as_any_mut()
             .downcast_mut::<MySqlTxContext>()
-            .ok_or_else(|| "UnitOfWork is not a MySqlUnitOfWork".to_string())?;
+            .ok_or_else(|| AppointmentModelDomainError::DatabaseError("Invalid UnitOfWork context".to_string()))?;
 
         sqlx::query(
             r#"
@@ -150,7 +150,7 @@ impl AppointmentRepository for MySqlAppointmentRepository {
             .bind(id.value())
             .execute(&mut *ctx.tx)
             .await
-            .map_err(|e| format!("Appointment delete error: {}", e))?;
+            .map_err(|e| AppointmentModelDomainError::DatabaseError(e.to_string()))?;
         
         Ok(())
     }

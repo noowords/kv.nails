@@ -10,7 +10,7 @@ use crate::domain::models::{
 
 use super::super::super::shared::{ UnitOfWorkFactory };
 
-use super::{ RegisterUserCommand };
+use super::{ RegisterUserCommand, RegisterUserUseCaseApplicationError };
 
 pub struct RegisterUserUseCase {
     uow_factory: Arc<dyn UnitOfWorkFactory>,
@@ -34,7 +34,7 @@ impl RegisterUserUseCase {
     pub async fn execute(
         &self,
         cmd: RegisterUserCommand
-    ) -> Result<(), String> {
+    ) -> Result<(), RegisterUserUseCaseApplicationError> {
         let mut uow = self.uow_factory.begin().await?;
 
         let mut user = User::new(

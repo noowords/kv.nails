@@ -6,7 +6,7 @@ use crate::domain::models::{
 
 use super::super::super::shared::{ UnitOfWorkFactory };
 
-use super::{ CreateAppointmentCommand };
+use super::{ CreateAppointmentCommand, CreateAppointmentUseCaseApplicationError };
 
 pub struct CreateAppointmentUseCase {
     uow_factory: Arc<dyn UnitOfWorkFactory>,
@@ -27,7 +27,7 @@ impl CreateAppointmentUseCase {
     pub async fn execute(
         &self,
         cmd: CreateAppointmentCommand
-    ) -> Result<(), String> {
+    ) -> Result<(), CreateAppointmentUseCaseApplicationError> {
         let mut uow = self.uow_factory.begin().await?;
 
         let appointment = Appointment::new(

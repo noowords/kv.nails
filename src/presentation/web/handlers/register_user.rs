@@ -5,11 +5,11 @@ use axum::{
 
 use crate::application::use_cases::register_user::{ RegisterUserCommand };
 
-use super::super::{ AppState };
+use super::super::{ AppState, AppError };
 
 pub async fn register_user(
     State(state): State<AppState>
-) -> Result<StatusCode, (StatusCode, String)> {
+) -> Result<StatusCode, AppError> {
     let cmd = RegisterUserCommand::new(
         Some(String::from("00000000000")),
         String::from("Иван"),
@@ -18,9 +18,7 @@ pub async fn register_user(
         None
     );
 
-    state.ucs.register_user.execute(cmd)
-        .await
-        .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+    state.ucs.register_user.execute(cmd).await?;
 
     Ok(StatusCode::CREATED)
 }

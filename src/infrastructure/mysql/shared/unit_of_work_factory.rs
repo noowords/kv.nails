@@ -2,7 +2,7 @@ use async_trait::{ async_trait };
 use sqlx::mysql::{ MySqlPool };
 
 use crate::domain::shared::{ UnitOfWork };
-use crate::application::shared::{ UnitOfWorkFactory };
+use crate::application::shared::{ UnitOfWorkFactory, SharedApplicationError };
 
 use super::{ MySqlUnitOfWork };
 
@@ -18,7 +18,7 @@ impl MySqlUnitOfWorkFactory {
 
 #[async_trait]
 impl UnitOfWorkFactory for MySqlUnitOfWorkFactory {
-    async fn begin(&self) -> Result<Box<dyn UnitOfWork>, String> {
+    async fn begin(&self) -> Result<Box<dyn UnitOfWork>, SharedApplicationError> {
         let uow = MySqlUnitOfWork::begin(&self.pool).await?;
         
         Ok(Box::new(uow))

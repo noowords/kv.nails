@@ -5,7 +5,7 @@ use sqlx::{ FromRow };
 use crate::domain::models::{
     user::value_objects::{ UserId },
     appointment::{
-        Appointment,
+        Appointment, AppointmentModelDomainError,
         value_objects::{ AppointmentId, AppointmentStatus }
     }
 };
@@ -65,7 +65,7 @@ impl MySqlAppointmentRow {
 }
 
 impl TryFrom<MySqlAppointmentRow> for Appointment {
-    type Error = String;
+    type Error = AppointmentModelDomainError;
     
     fn try_from(record: MySqlAppointmentRow) -> Result<Self, Self::Error> {
         Ok(Self::new(
@@ -74,8 +74,7 @@ impl TryFrom<MySqlAppointmentRow> for Appointment {
             UserId::from(record.client_id),
             record.date,
             record.time,
-            Some(AppointmentStatus::from_str(&record.status)
-                .ok_or_else(|| format!("Unknown status: {}", record.status))?)
+            Some(AppointmentStatus::try_from(record.status.as_str())?)
         ))
     }
 }

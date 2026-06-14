@@ -3,7 +3,7 @@ use sqlx::{ FromRow };
 
 use crate::domain::models::{
     user::value_objects::{ UserId },
-    profile::{ Profile }
+    profile::{ Profile, ProfileModelDomainError }
 };
 
 #[derive(FromRow)]
@@ -54,7 +54,7 @@ impl MySqlProfileRow {
 }
 
 impl TryFrom<MySqlProfileRow> for Profile {
-    type Error = String;
+    type Error = ProfileModelDomainError;
     
     fn try_from(record: MySqlProfileRow) -> Result<Self, Self::Error> {
         Ok(Self::new(

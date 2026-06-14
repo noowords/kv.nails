@@ -2,7 +2,7 @@ use uuid::{ Uuid };
 use sqlx::{ FromRow };
 
 use crate::domain::models::user::{
-    User,
+    User, UserModelDomainError,
     value_objects::{ UserId, UserRole, UserPhone }
 };
 
@@ -40,13 +40,12 @@ impl MySqlUserRow {
 }
 
 impl TryFrom<MySqlUserRow> for User {
-    type Error = String;
+    type Error = UserModelDomainError;
     
     fn try_from(record: MySqlUserRow) -> Result<Self, Self::Error> {
         Ok(Self::new(
             Some(UserId::from(record.id)),
-            Some(UserRole::from_str(&record.role)
-                .ok_or_else(|| format!("Unknown role: {}", record.role))?),
+            Some(UserRole::try_from(record.role.as_str())?),
              match record.phone {
                 Some(p) => Some(UserPhone::new(p)?),
                 None => None

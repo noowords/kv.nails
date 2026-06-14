@@ -1,14 +1,12 @@
 use std::sync::{ Arc };
 
-use crate::domain::{
-    shared::{ RepositoryProvider },
-    models::{
-        user::{ UserRepository },
-        profile::{ ProfileRepository },
-        master::{ MasterRepository },
-        appointment::{ AppointmentRepository }
-    }
+use crate::domain::models::{
+    user::{ UserRepository },
+    profile::{ ProfileRepository },
+    master::{ MasterRepository },
+    appointment::{ AppointmentRepository }
 };
+use crate::application::shared::{ RepositoryProvider };
 
 use super::super::models::{
     user::{ MySqlUserRepository },

@@ -6,7 +6,7 @@ use crate::domain::models::{
 
 use super::super::super::shared::{ UnitOfWorkFactory };
 
-use super::{ CreateMasterCommand };
+use super::{ CreateMasterCommand, CreateMasterUseCaseApplicationError };
 
 pub struct CreateMasterUseCase {
     uow_factory: Arc<dyn UnitOfWorkFactory>,
@@ -27,7 +27,7 @@ impl CreateMasterUseCase {
     pub async fn execute(
         &self,
         cmd: CreateMasterCommand
-    ) -> Result<(), String> {
+    ) -> Result<(), CreateMasterUseCaseApplicationError> {
         let mut uow = self.uow_factory.begin().await?;
 
         let mut master = Master::new(cmd.user_id, cmd.schedule);
