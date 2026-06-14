@@ -1,7 +1,8 @@
 use std::sync::{ Arc };
 
 use crate::domain::models::{
-    master::{ Master, MasterRepository }
+    user::value_objects::{ UserId },
+    master::{ Master, MasterRepository, MasterModelDomainError }
 };
 
 use super::super::super::shared::{ UnitOfWorkFactory };
@@ -30,7 +31,11 @@ impl CreateMasterUseCase {
     ) -> Result<(), CreateMasterUseCaseApplicationError> {
         let mut uow = self.uow_factory.begin().await?;
 
-        let mut master = Master::new(cmd.user_id, cmd.schedule);
+        let mut master = Master::new(
+            UserId::from(cmd.user_id),
+            serde_json::from_value(cmd.schedule)
+                .map_err(|e| MasterModelDomainError::CorruptedSchedule(e.to_string()))?
+        );
 
         self.master_repository.create(&mut *uow, &mut master).await?;
 

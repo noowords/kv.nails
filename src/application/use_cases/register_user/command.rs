@@ -1,3 +1,6 @@
+use serde::{ Deserialize };
+
+#[derive(Deserialize)]
 pub struct RegisterUserCommand {
     pub user_phone: Option<String>,
     pub profile_first_name: String,

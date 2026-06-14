@@ -1,17 +1,19 @@
 use chrono::{ NaiveDate, NaiveTime };
-use crate::domain::models::user::value_objects::{ UserId };
+use uuid::{ Uuid };
+use serde::{ Deserialize };
 
+#[derive(Deserialize)]
 pub struct CreateAppointmentCommand {
-    pub master_id: UserId,
-    pub client_id: UserId,
+    pub master_id: Uuid,
+    pub client_id: Uuid,
     pub date: NaiveDate,
     pub time: NaiveTime
 }
 
 impl CreateAppointmentCommand {
     pub fn new(
-        master_id: UserId,
-        client_id: UserId,
+        master_id: Uuid,
+        client_id: Uuid,
         date: NaiveDate,
         time: NaiveTime
     ) -> Self {

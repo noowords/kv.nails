@@ -1,17 +1,16 @@
-use crate::domain::models::{
-    user::value_objects::{ UserId },
-    master::value_objects::{ Schedule }
-};
+use serde::{ Deserialize };
+use uuid::{ Uuid };
 
+#[derive(Deserialize)]
 pub struct CreateMasterCommand {
-    pub user_id: UserId,
-    pub schedule: Schedule
+    pub user_id: Uuid,
+    pub schedule: serde_json::Value
 }
 
 impl CreateMasterCommand {
     pub fn new(
-        user_id: UserId,
-        schedule: Schedule
+        user_id: Uuid,
+        schedule: serde_json::Value
     ) -> Self {
         Self {
             user_id,

@@ -1,6 +1,7 @@
 use std::sync::{ Arc };
 
 use crate::domain::models::{
+    user::value_objects::{ UserId },
     appointment::{ Appointment, AppointmentRepository }
 };
 
@@ -32,8 +33,8 @@ impl CreateAppointmentUseCase {
 
         let appointment = Appointment::new(
             None,
-            cmd.master_id,
-            cmd.client_id,
+            UserId::from(cmd.master_id),
+            UserId::from(cmd.client_id),
             cmd.date,
             cmd.time,
             None
