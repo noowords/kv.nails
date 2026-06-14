@@ -1,7 +1,7 @@
 use tokio::net::{ TcpListener };
 use axum::{ Router };
 
-pub async fn run(app: Router) {
+pub async fn run_server(app: Router) {
     let listener = TcpListener::bind("0.0.0.0:3000")
         .await
         .unwrap();

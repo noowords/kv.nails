@@ -3,6 +3,6 @@ mod router;
 mod state;
 pub mod handlers;
 
-pub use server::{ run };
+pub use state::{ AppState, UseCases };
 pub use router::{ create_router };
-pub use state::{ AppState };
+pub use server::{ run_server };

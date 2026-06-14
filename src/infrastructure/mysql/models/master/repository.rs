@@ -1,7 +1,7 @@
 use async_trait::{ async_trait };
 use serde_json;
 
-use crate::domain::shared::{ TxContext };
+use crate::domain::shared::{ UnitOfWork };
 use crate::domain::models::{
     user::value_objects::{ UserId },
     master::{ Master, MasterRepository }
@@ -23,12 +23,13 @@ impl MySqlMasterRepository {
 impl MasterRepository for MySqlMasterRepository {
     async fn create(
         &self,
-        ctx: &mut dyn TxContext,
+        uow: &mut dyn UnitOfWork,
         master: &mut Master
     ) -> Result<(), String> {
-        let ctx = ctx
+        let ctx = uow.ctx_mut()
+            .as_any_mut()
             .downcast_mut::<MySqlTxContext>()
-            .ok_or_else(|| "Invalid transaction context type".to_string())?;
+            .ok_or_else(|| "UnitOfWork is not a MySqlUnitOfWork".to_string())?;
 
         let schedule_json = serde_json::to_value(master.schedule())
             .map_err(|e| format!("Schedule serializing error: {}", e))?;
@@ -50,12 +51,13 @@ impl MasterRepository for MySqlMasterRepository {
     
     async fn get_by_user_id(
         &self,
-        ctx: &mut dyn TxContext,
+        uow: &mut dyn UnitOfWork,
         user_id: UserId
     ) -> Result<Option<Master>, String> {
-        let ctx = ctx
+        let ctx = uow.ctx_mut()
+            .as_any_mut()
             .downcast_mut::<MySqlTxContext>()
-            .ok_or_else(|| "Invalid transaction context type".to_string())?;
+            .ok_or_else(|| "UnitOfWork is not a MySqlUnitOfWork".to_string())?;
 
         let row: Option<MySqlMasterRow> = sqlx::query_as(
             r#"
@@ -77,12 +79,13 @@ impl MasterRepository for MySqlMasterRepository {
     
     async fn exists(
         &self,
-        ctx: &mut dyn TxContext,
+        uow: &mut dyn UnitOfWork,
         user_id: UserId
     ) -> Result<bool, String> {
-        let ctx = ctx
+        let ctx = uow.ctx_mut()
+            .as_any_mut()
             .downcast_mut::<MySqlTxContext>()
-            .ok_or_else(|| "Invalid transaction context type".to_string())?;
+            .ok_or_else(|| "UnitOfWork is not a MySqlUnitOfWork".to_string())?;
 
         let row = sqlx::query(
             r#"
@@ -102,12 +105,13 @@ impl MasterRepository for MySqlMasterRepository {
 
     async fn update(
         &self,
-        ctx: &mut dyn TxContext,
+        uow: &mut dyn UnitOfWork,
         master: &mut Master
     ) -> Result<(), String> {
-        let ctx = ctx
+        let ctx = uow.ctx_mut()
+            .as_any_mut()
             .downcast_mut::<MySqlTxContext>()
-            .ok_or_else(|| "Invalid transaction context type".to_string())?;
+            .ok_or_else(|| "UnitOfWork is not a MySqlUnitOfWork".to_string())?;
 
         let row = MySqlMasterRow::from(&*master);
 
@@ -128,12 +132,13 @@ impl MasterRepository for MySqlMasterRepository {
     
     async fn remove(
         &self,
-        ctx: &mut dyn TxContext,
+        uow: &mut dyn UnitOfWork,
         user_id: UserId
     ) -> Result<(), String> {
-        let ctx = ctx
+        let ctx = uow.ctx_mut()
+            .as_any_mut()
             .downcast_mut::<MySqlTxContext>()
-            .ok_or_else(|| "Invalid transaction context type".to_string())?;
+            .ok_or_else(|| "UnitOfWork is not a MySqlUnitOfWork".to_string())?;
 
         sqlx::query(
             r#"

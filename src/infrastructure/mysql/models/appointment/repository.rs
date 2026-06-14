@@ -1,6 +1,6 @@
 use async_trait::{ async_trait };
 
-use crate::domain::shared::{ TxContext };
+use crate::domain::shared::{ UnitOfWork };
 use crate::domain::models::appointment::{
     Appointment, AppointmentRepository,
     value_objects::{ AppointmentId }
@@ -22,12 +22,13 @@ impl MySqlAppointmentRepository {
 impl AppointmentRepository for MySqlAppointmentRepository {
     async fn create(
         &self,
-        ctx: &mut dyn TxContext,
+        uow: &mut dyn UnitOfWork,
         appointment: Appointment
     ) -> Result<(), String> {
-        let ctx = ctx
+        let ctx = uow.ctx_mut()
+            .as_any_mut()
             .downcast_mut::<MySqlTxContext>()
-            .ok_or_else(|| "Invalid transaction context type".to_string())?;
+            .ok_or_else(|| "UnitOfWork is not a MySqlUnitOfWork".to_string())?;
 
         sqlx::query(
             r#"
@@ -50,12 +51,13 @@ impl AppointmentRepository for MySqlAppointmentRepository {
     
     async fn get_by_id(
         &self,
-        ctx: &mut dyn TxContext,
+        uow: &mut dyn UnitOfWork,
         id: AppointmentId
     ) -> Result<Option<Appointment>, String> {
-        let ctx = ctx
+        let ctx = uow.ctx_mut()
+            .as_any_mut()
             .downcast_mut::<MySqlTxContext>()
-            .ok_or_else(|| "Invalid transaction context type".to_string())?;
+            .ok_or_else(|| "UnitOfWork is not a MySqlUnitOfWork".to_string())?;
 
         let row: Option<MySqlAppointmentRow> = sqlx::query_as(
             r#"
@@ -77,12 +79,13 @@ impl AppointmentRepository for MySqlAppointmentRepository {
     
     async fn exists(
         &self,
-        ctx: &mut dyn TxContext,
+        uow: &mut dyn UnitOfWork,
         id: AppointmentId
     ) -> Result<bool, String> {
-        let ctx = ctx
+        let ctx = uow.ctx_mut()
+            .as_any_mut()
             .downcast_mut::<MySqlTxContext>()
-            .ok_or_else(|| "Invalid transaction context type".to_string())?;
+            .ok_or_else(|| "UnitOfWork is not a MySqlUnitOfWork".to_string())?;
 
         let row = sqlx::query(
             r#"
@@ -102,12 +105,13 @@ impl AppointmentRepository for MySqlAppointmentRepository {
     
     async fn update(
         &self,
-        ctx: &mut dyn TxContext,
+        uow: &mut dyn UnitOfWork,
         appointment: Appointment
     ) -> Result<(), String> {
-        let ctx = ctx
+        let ctx = uow.ctx_mut()
+            .as_any_mut()
             .downcast_mut::<MySqlTxContext>()
-            .ok_or_else(|| "Invalid transaction context type".to_string())?;
+            .ok_or_else(|| "UnitOfWork is not a MySqlUnitOfWork".to_string())?;
 
         let row = MySqlAppointmentRow::from(&appointment);
 
@@ -129,12 +133,13 @@ impl AppointmentRepository for MySqlAppointmentRepository {
     
     async fn remove(
         &self,
-        ctx: &mut dyn TxContext,
+        uow: &mut dyn UnitOfWork,
         id: AppointmentId
     ) -> Result<(), String> {
-        let ctx = ctx
+        let ctx = uow.ctx_mut()
+            .as_any_mut()
             .downcast_mut::<MySqlTxContext>()
-            .ok_or_else(|| "Invalid transaction context type".to_string())?;
+            .ok_or_else(|| "UnitOfWork is not a MySqlUnitOfWork".to_string())?;
 
         sqlx::query(
             r#"

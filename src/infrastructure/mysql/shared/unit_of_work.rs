@@ -1,39 +1,37 @@
-use std::sync::{ Arc };
-use tokio::sync::{ Mutex };
 use async_trait::{ async_trait };
-use sqlx::{ MySql, Transaction };
+use sqlx::mysql::{ MySqlPool };
 
-use crate::domain::shared::{ UnitOfWork };
+use crate::domain::shared::{ TxContext, UnitOfWork };
+
+use super::{ MySqlTxContext };
 
 pub struct MySqlUnitOfWork {
-    tx: Arc<Mutex<Option<Transaction<'static, MySql>>>>
+    pub ctx: MySqlTxContext
 }
 
 impl MySqlUnitOfWork {
-    pub fn new(tx: Arc<Mutex<Option<Transaction<'static, MySql>>>>) -> Self {
-        Self { tx }
+    pub async fn begin(pool: &MySqlPool) -> Result<Self, String> {
+        let tx = pool.begin().await
+            .map_err(|e| format!("Transaction begin error: {}", e))?;
+        let ctx = MySqlTxContext::new(tx);
+        
+        Ok(Self { ctx })
     }
 }
 
 #[async_trait]
 impl UnitOfWork for MySqlUnitOfWork {
-    async fn commit(self: Box<Self>) -> Result<(), String> {
-        let mut tx_guard = self.tx.lock().await;
-        
-        if let Some(tx) = tx_guard.take() {
-            tx.commit().await.map_err(|e| e.to_string())?;
-        }
+    fn ctx_mut(&mut self) -> &mut dyn TxContext {
+        &mut self.ctx
+    }
 
-        Ok(())
+    async fn commit(self: Box<Self>) -> Result<(), String> {
+        self.ctx.tx.commit().await
+            .map_err(|e| format!("Commit error: {}", e))
     }
 
     async fn rollback(self: Box<Self>) -> Result<(), String> {
-        let mut tx_guard = self.tx.lock().await;
-        
-        if let Some(tx) = tx_guard.take() {
-            tx.rollback().await.map_err(|e| e.to_string())?;
-        }
-
-        Ok(())
+        self.ctx.tx.rollback().await
+            .map_err(|e| format!("Rollback error: {}", e))
     }
 }

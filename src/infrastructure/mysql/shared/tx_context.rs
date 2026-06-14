@@ -15,6 +15,6 @@ impl MySqlTxContext {
 
 impl TxContext for MySqlTxContext {
     fn as_any_mut(&mut self) -> &mut dyn Any {
-        self as &mut dyn Any
+        &mut *self
     }
 }

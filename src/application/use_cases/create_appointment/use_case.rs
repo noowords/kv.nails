@@ -1,30 +1,35 @@
 use std::sync::{ Arc };
 
-use crate::domain::shared::{ TxContext };
 use crate::domain::models::{
     appointment::{ Appointment, AppointmentRepository }
 };
 
+use super::super::super::shared::{ UnitOfWorkFactory };
+
 use super::{ CreateAppointmentCommand };
 
 pub struct CreateAppointmentUseCase {
+    uow_factory: Arc<dyn UnitOfWorkFactory>,
     appointment_repository: Arc<dyn AppointmentRepository>
 }
 
 impl CreateAppointmentUseCase {
     pub fn new(
+        uow_factory: Arc<dyn UnitOfWorkFactory>,
         appointment_repository: Arc<dyn AppointmentRepository>
     ) -> Self {
         Self {
+            uow_factory,
             appointment_repository
         }
     }
 
     pub async fn execute(
         &self,
-        ctx: &mut dyn TxContext,
         cmd: CreateAppointmentCommand
     ) -> Result<(), String> {
+        let mut uow = self.uow_factory.begin().await?;
+
         let appointment = Appointment::new(
             None,
             cmd.master_id,
@@ -34,7 +39,7 @@ impl CreateAppointmentUseCase {
             None
         );
 
-        self.appointment_repository.create(ctx, appointment).await?;
+        self.appointment_repository.create(&mut *uow, appointment).await?;
 
         Ok(())
     }

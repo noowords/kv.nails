@@ -1,6 +1,6 @@
 use async_trait::{ async_trait };
 
-use crate::domain::shared::{ TxContext };
+use crate::domain::shared::{ UnitOfWork };
 use crate::domain::models::{
     user::value_objects::{ UserId },
     profile::{ Profile, ProfileRepository }
@@ -22,12 +22,13 @@ impl MySqlProfileRepository {
 impl ProfileRepository for MySqlProfileRepository {
     async fn create(
         &self,
-        ctx: &mut dyn TxContext,
+        uow: &mut dyn UnitOfWork,
         profile: &mut Profile
     ) -> Result<(), String> {
-        let ctx = ctx
+        let ctx = uow.ctx_mut()
+            .as_any_mut()
             .downcast_mut::<MySqlTxContext>()
-            .ok_or_else(|| "Invalid transaction context type".to_string())?;
+            .ok_or_else(|| "UnitOfWork is not a MySqlUnitOfWork".to_string())?;
 
         sqlx::query(
             r#"
@@ -49,12 +50,13 @@ impl ProfileRepository for MySqlProfileRepository {
     
     async fn get_by_user_id(
         &self,
-        ctx: &mut dyn TxContext,
+        uow: &mut dyn UnitOfWork,
         user_id: UserId
     ) -> Result<Option<Profile>, String> {
-        let ctx = ctx
+        let ctx = uow.ctx_mut()
+            .as_any_mut()
             .downcast_mut::<MySqlTxContext>()
-            .ok_or_else(|| "Invalid transaction context type".to_string())?;
+            .ok_or_else(|| "UnitOfWork is not a MySqlUnitOfWork".to_string())?;
 
         let row: Option<MySqlProfileRow> = sqlx::query_as(
             r#"
@@ -76,12 +78,13 @@ impl ProfileRepository for MySqlProfileRepository {
     
     async fn exists(
         &self,
-        ctx: &mut dyn TxContext,
+        uow: &mut dyn UnitOfWork,
         user_id: UserId
     ) -> Result<bool, String> {
-        let ctx = ctx
+        let ctx = uow.ctx_mut()
+            .as_any_mut()
             .downcast_mut::<MySqlTxContext>()
-            .ok_or_else(|| "Invalid transaction context type".to_string())?;
+            .ok_or_else(|| "UnitOfWork is not a MySqlUnitOfWork".to_string())?;
 
         let row = sqlx::query(
             r#"
@@ -101,12 +104,13 @@ impl ProfileRepository for MySqlProfileRepository {
     
     async fn update(
         &self,
-        ctx: &mut dyn TxContext,
+        uow: &mut dyn UnitOfWork,
         profile: &mut Profile
     ) -> Result<(), String> {
-        let ctx = ctx
+        let ctx = uow.ctx_mut()
+            .as_any_mut()
             .downcast_mut::<MySqlTxContext>()
-            .ok_or_else(|| "Invalid transaction context type".to_string())?;
+            .ok_or_else(|| "UnitOfWork is not a MySqlUnitOfWork".to_string())?;
 
         let row = MySqlProfileRow::from(&*profile);
 
@@ -131,12 +135,13 @@ impl ProfileRepository for MySqlProfileRepository {
     
     async fn remove(
         &self,
-        ctx: &mut dyn TxContext,
+        uow: &mut dyn UnitOfWork,
         user_id: UserId
     ) -> Result<(), String> {
-        let ctx = ctx
+        let ctx = uow.ctx_mut()
+            .as_any_mut()
             .downcast_mut::<MySqlTxContext>()
-            .ok_or_else(|| "Invalid transaction context type".to_string())?;
+            .ok_or_else(|| "UnitOfWork is not a MySqlUnitOfWork".to_string())?;
 
         sqlx::query(
             r#"

@@ -2,44 +2,17 @@ mod domain;
 mod infrastructure;
 mod application;
 mod presentation;
-
-use std::sync::{ Arc };
-use sqlx::{ MySqlPool };
-
-use crate::infrastructure::mysql::models::{
-    user::{ MySqlUserRepository },
-    profile::{ MySqlProfileRepository },
-    master::{ MySqlMasterRepository },
-    appointment::{ MySqlAppointmentRepository }
-};
-use crate::application::use_cases::{
-    create_appointment::{ CreateAppointmentUseCase },
-    create_master::{ CreateMasterUseCase },
-    register_user::{ RegisterUserUseCase }
-};
-use crate::presentation::web::{ AppState, create_router, run };
+mod bootstrap;
 
 #[tokio::main]
 async fn main() {
-    let db_pool = MySqlPool::connect("mysql://root:root@localhost:3306/kvnails").await.unwrap();
-    
-    let user_repository = Arc::new(MySqlUserRepository::new());
-    let profile_repository = Arc::new(MySqlProfileRepository::new());
-    let master_repository = Arc::new(MySqlMasterRepository::new());
-    let appointment_repository = Arc::new(MySqlAppointmentRepository::new());
-    
-    let create_appointment_uc = Arc::new(CreateAppointmentUseCase::new(appointment_repository));
-    let create_master_uc = Arc::new(CreateMasterUseCase::new(master_repository));
-    let register_user_uc = Arc::new(RegisterUserUseCase::new(user_repository, profile_repository));
+    let db_pool = bootstrap::create_mysql_pool().await.expect("Database connection failed");
+    let provider = bootstrap::create_mysql_provider().await;
+    let uow_factory = bootstrap::create_mysql_unit_of_work_factory(db_pool);
+    let ucs = bootstrap::build_use_cases(uow_factory, provider);
 
-    let state = AppState::new(
-        db_pool,
-        create_appointment_uc,
-        create_master_uc,
-        register_user_uc
-    );
+    let state = presentation::web::AppState::new(ucs);
+    let app = presentation::web::create_router(state);
 
-    let app = create_router(state);
-    
-    run(app).await;
+    presentation::web::run_server(app).await;
 }

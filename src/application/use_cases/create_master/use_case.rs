@@ -1,33 +1,38 @@
 use std::sync::{ Arc };
 
-use crate::domain::shared::{ TxContext };
 use crate::domain::models::{
     master::{ Master, MasterRepository }
 };
 
+use super::super::super::shared::{ UnitOfWorkFactory };
+
 use super::{ CreateMasterCommand };
 
 pub struct CreateMasterUseCase {
+    uow_factory: Arc<dyn UnitOfWorkFactory>,
     master_repository: Arc<dyn MasterRepository>
 }
 
 impl CreateMasterUseCase {
     pub fn new(
+        uow_factory: Arc<dyn UnitOfWorkFactory>,
         master_repository: Arc<dyn MasterRepository>
     ) -> Self {
         Self {
+            uow_factory,
             master_repository
         }
     }
 
     pub async fn execute(
         &self,
-        ctx: &mut dyn TxContext,
         cmd: CreateMasterCommand
     ) -> Result<(), String> {
+        let mut uow = self.uow_factory.begin().await?;
+
         let mut master = Master::new(cmd.user_id, cmd.schedule);
 
-        self.master_repository.create(ctx, &mut master).await?;
+        self.master_repository.create(&mut *uow, &mut master).await?;
 
         Ok(())
     }
